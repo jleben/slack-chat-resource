@@ -8,7 +8,7 @@ import (
     //"os/exec"
     "fmt"
     //"net/http"
-    "github.com/jleben/trigger-resource/protocol"
+    "github.com/jakobleben/slack-request-resource/protocol"
     "github.com/nlopes/slack"
 )
 
