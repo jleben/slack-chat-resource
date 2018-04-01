@@ -105,10 +105,21 @@ func get(request *protocol.InRequest, destination string, slack_client *slack.Cl
 
 func reply(request protocol.InRequest, slack_client *slack.Client) {
 
+    atc := os.Getenv("ATC_EXTERNAL_URL")
+    team := os.Getenv("BUILD_TEAM_NAME")
+    pipeline := os.Getenv("BUILD_PIPELINE_NAME")
+    job := os.Getenv("BUILD_JOB_NAME")
+    build := os.Getenv("BUILD_NAME")
+
+    text := fmt.Sprintf("<%s/teams/%s/pipelines/%s/jobs/%s/builds/%s|Working on it>.",
+                        atc, team, pipeline, job, build)
+
+    fmt.Fprintf(os.Stderr, "Replying: %s\n", text)
+
     params := slack.NewPostMessageParameters()
     params.ThreadTimestamp = request.Version["request"]
-
-    text := fmt.Sprintf("Working on it.")
+    params.Markdown = true
+    params.EscapeText = false
 
     _, _, err := slack_client.PostMessage(request.Source.ChannelId, text, params)
     if err != nil {
