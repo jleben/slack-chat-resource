@@ -126,12 +126,12 @@ func process_message(message *slack.Message, request protocol.CheckRequest, slac
 
     fmt.Fprintf(os.Stderr, "Parsed request: %s\n", slack_request.Contents)
 
-    if message_was_detected(message, slack_request, &request, slack_client) {
-        fmt.Fprintf(os.Stderr, "Message already processed previously.\n")
-        return nil, true
+    if request.Source.IgnoreReplied {
+        if has_reply(message, &request, slack_client) {
+            fmt.Fprintf(os.Stderr, "Message already replied to.\n")
+            return nil, true
+        }
     }
-
-    reply(message, slack_request, request, slack_client)
 
     version := protocol.Version{
         "request": message.Msg.Timestamp,
@@ -140,8 +140,7 @@ func process_message(message *slack.Message, request protocol.CheckRequest, slac
     return version, false
 }
 
-func message_was_detected(message *slack.Message, slack_request *protocol.SlackRequest,
-                       request *protocol.CheckRequest, slack_client *slack.Client) bool {
+func has_reply(message *slack.Message, request *protocol.CheckRequest, slack_client *slack.Client) bool {
     if message.Msg.ReplyCount == 0 {
         return false
     }
@@ -152,27 +151,12 @@ func message_was_detected(message *slack.Message, slack_request *protocol.SlackR
     }
 
     for _, reply := range replies {
-        was_detected := reply.User == request.Source.AgentId && reply.Msg.Text == "Acknowledged."
-        if was_detected { return true }
+        has_reply := reply.User == request.Source.AgentId
+        if has_reply { return true }
     }
 
     return false
 }
-
-func reply(message *slack.Message, slack_request *protocol.SlackRequest,
-    request protocol.CheckRequest, slack_client *slack.Client) {
-
-    params := slack.NewPostMessageParameters()
-    params.ThreadTimestamp = message.Msg.Timestamp
-
-    text := "Acknowledged."
-
-    _, _, err := slack_client.PostMessage(request.Source.ChannelId, text, params)
-    if err != nil {
-        fatal("replying", err)
-    }
-}
-
 
 /*
 func get_channel_id(request protocol.CheckRequest) {

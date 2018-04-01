@@ -9,6 +9,7 @@ type Source struct {
     AgentId string `json:"agent_id"`
     Token string `json:"token"`
     Context string `json:"context"`
+    IgnoreReplied bool `json:"ignore_replied"`
 }
 
 type Version map[string]string
