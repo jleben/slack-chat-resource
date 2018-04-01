@@ -106,6 +106,13 @@ func get(request *protocol.InRequest, destination string, slack_client *slack.Cl
         }
     }
 
+    {
+        err := ioutil.WriteFile(filepath.Join(destination, "timestamp"), []byte(message.Msg.Timestamp), 0644)
+        if err != nil {
+            fatal("writing timestamp file", err)
+        }
+    }
+
     var response protocol.InResponse
     response.Version = request.Version
     return response
