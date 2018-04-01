@@ -33,14 +33,19 @@ func main() {
         fatal1("Missing source field: channel_id.")
     }
 
-    if len(request.Params.ContentFile) == 0 {
-        fatal1("Missing params field: content.")
+    if len(request.Params.TextFile) == 0 && len(request.Params.Text) == 0 {
+        fatal1("Missing params field: text or text_file.")
     }
 
     fmt.Fprintf(os.Stderr, "thread file: %s\n", request.Params.ThreadFile)
-    fmt.Fprintf(os.Stderr, "contents file: %s\n", request.Params.ContentFile)
+    fmt.Fprintf(os.Stderr, "text file: %s\n", request.Params.TextFile)
+    fmt.Fprintf(os.Stderr, "input text:\n%s\n", request.Params.Text)
 
-    contents := get_file_contents(filepath.Join(source_dir, request.Params.ContentFile))
+    text := request.Params.Text
+
+    if len(text) == 0 {
+        text = get_file_contents(filepath.Join(source_dir, request.Params.TextFile))
+    }
 
     var thread string
     if len(request.Params.ThreadFile) != 0 {
@@ -48,11 +53,11 @@ func main() {
     }
 
     fmt.Fprintf(os.Stderr, "thread: %s\n", thread)
-    fmt.Fprintf(os.Stderr, "contents:\n%s\n", contents)
+    fmt.Fprintf(os.Stderr, "output text:\n%s\n", text)
 
     slack_client := slack.New(request.Source.Token)
 
-    send(thread, contents, &request, slack_client)
+    send(thread, text, &request, slack_client)
 
     var response protocol.OutResponse
 
@@ -76,12 +81,12 @@ func get_file_contents(path string) string {
     return string(data)
 }
 
-func send(thread string, contents string, request *protocol.OutRequest, slack_client *slack.Client) {
+func send(thread string, text string, request *protocol.OutRequest, slack_client *slack.Client) {
 
     params := slack.NewPostMessageParameters()
     params.ThreadTimestamp = thread
 
-    _, _, err := slack_client.PostMessage(request.Source.ChannelId, contents, params)
+    _, _, err := slack_client.PostMessage(request.Source.ChannelId, text, params)
     if err != nil {
         fatal("sending", err)
     }
