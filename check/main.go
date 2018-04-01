@@ -7,6 +7,7 @@ import (
     "os"
     //"os/exec"
     "fmt"
+    "strings"
     //"net/http"
     "github.com/jakobleben/slack-request-resource/protocol"
     "github.com/nlopes/slack"
@@ -35,9 +36,7 @@ func main() {
         fatal1("Missing source field: agent_id.")
     }
 
-    if len(request.Source.Context) == 0 {
-        fatal1("Missing source field: context.")
-    }
+    fmt.Fprintf(os.Stderr, "Pattern: %s\n", request.Source.Pattern)
 
     slack_client := slack.New(request.Source.Token)
 
@@ -117,14 +116,18 @@ func process_message(message *slack.Message, request protocol.CheckRequest, slac
 
     fmt.Fprintf(os.Stderr, "Message %s: %s \n", message.Msg.Timestamp, message.Msg.Text)
 
-    slack_request := protocol.ParseSlackRequest(message.Msg.Text, &request.Source)
+    matches, is_matched, parse_err := protocol.ParseMessage(message.Msg.Text, &request.Source)
 
-    if slack_request == nil {
+    if parse_err != nil {
+        fatal("parsing message", parse_err)
+    }
+
+    if !is_matched {
         fmt.Fprintf(os.Stderr, "Invalid format.\n")
         return nil, false
     }
 
-    fmt.Fprintf(os.Stderr, "Parsed request: %s\n", slack_request.Contents)
+    fmt.Fprintf(os.Stderr, "Message parsed: %s\n", strings.Join(matches, ", "))
 
     if request.Source.IgnoreReplied {
         if has_reply(message, &request, slack_client) {

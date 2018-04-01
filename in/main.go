@@ -6,6 +6,7 @@ import (
     "os"
     "path/filepath"
     "fmt"
+    "strings"
     "github.com/jakobleben/slack-request-resource/protocol"
     "github.com/nlopes/slack"
 )
@@ -36,10 +37,6 @@ func main() {
 
     if len(request.Source.ChannelId) == 0 {
         fatal1("Missing source field: channel_id.")
-    }
-
-    if len(request.Source.Context) == 0 {
-        fatal1("Missing source field: context.")
     }
 
 	if _,ok := request.Version["request"]; !ok {
@@ -76,11 +73,17 @@ func get(request *protocol.InRequest, destination string, slack_client *slack.Cl
 
     message := history.Messages[0]
 
-    slack_request := protocol.ParseSlackRequest(message.Msg.Text, &request.Source)
+    matches, is_matched, parse_err := protocol.ParseMessage(message.Msg.Text, &request.Source)
 
-    if slack_request == nil {
+    if parse_err != nil {
+        fatal("parsing message", parse_err)
+    }
+
+    if !is_matched {
         fatal1("Failed to parse message.")
     }
+
+    fmt.Fprintf(os.Stderr, "Message parsed: %s\n", strings.Join(matches, ", "))
 
     {
         err := os.MkdirAll(destination, 0755)
@@ -89,8 +92,9 @@ func get(request *protocol.InRequest, destination string, slack_client *slack.Cl
         }
     }
 
-	{
-        err := ioutil.WriteFile(filepath.Join(destination, "contents"), []byte(slack_request.Contents), 0644)
+    for i, match  := range matches {
+        filename := fmt.Sprintf("part%d", i)
+        err := ioutil.WriteFile(filepath.Join(destination, filename), []byte(match), 0644)
         if err != nil {
             fatal("writing contents file", err)
         }

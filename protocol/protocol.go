@@ -2,13 +2,15 @@ package protocol
 
 import (
     "strings"
+    "regexp"
+    "errors"
 )
 
 type Source struct {
     ChannelId string `json:"channel_id"`
     AgentId string `json:"agent_id"`
     Token string `json:"token"`
-    Context string `json:"context"`
+    Pattern string `json:"pattern"`
     IgnoreReplied bool `json:"ignore_replied"`
 }
 
@@ -57,28 +59,27 @@ type SlackRequest struct {
     Contents string
 }
 
-func ParseSlackRequest(text string, source *Source) *SlackRequest {
+func ParseMessage(text string, source *Source) ([]string, bool, error) {
 
     text = strings.TrimLeft(text, " ")
 
     bot_mention := "<@" + source.AgentId + ">"
-    if !strings.HasPrefix(text, bot_mention) { return nil }
+    if !strings.HasPrefix(text, bot_mention) { return nil, false, nil }
 
     text = text[len(bot_mention):]
     text = strings.TrimLeft(text, " ")
 
-    parts := strings.SplitN(text, " ", 2)
-    if len(parts) < 2 { return nil }
+    if len(source.Pattern) == 0 { return []string{text}, true, nil }
 
-    context := parts[0]
-    if len(context) == 0 { return nil }
-    if context != source.Context { return nil }
+    regexp, regexp_err := regexp.Compile("^" + source.Pattern + "$")
+    if regexp_err != nil {
+        return nil, false, errors.New("Invalid pattern")
+    }
 
-    text = strings.Trim(parts[1], " ")
+    matches := regexp.FindStringSubmatch(text)
 
-    request := new(SlackRequest)
-    request.Contents = text
+    matched := len(matches) > 0
 
-    return request
+    return matches, matched, nil
 }
 
