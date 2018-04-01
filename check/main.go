@@ -7,7 +7,7 @@ import (
     "os"
     //"os/exec"
     "fmt"
-    "strings"
+    //"strings"
     //"net/http"
     "github.com/jakobleben/slack-request-resource/protocol"
     "github.com/nlopes/slack"
@@ -32,41 +32,34 @@ func main() {
         fatal1("Missing source field: channel_id.")
     }
 
-    if len(request.Source.AgentId) == 0 {
-        fatal1("Missing source field: agent_id.")
+    if request.Source.Filter != nil {
+        fmt.Fprintf(os.Stderr, "Filter:\n")
+        fmt.Fprintf(os.Stderr, "  - author: %s\n", request.Source.Filter.AuthorId)
+        fmt.Fprintf(os.Stderr, "  - pattern: %s\n", request.Source.Filter.TextPattern)
     }
 
-    fmt.Fprintf(os.Stderr, "Pattern: %s\n", request.Source.Pattern)
+    if request.Source.ReplyFilter != nil {
+        fmt.Fprintf(os.Stderr, "Reply Filter:\n")
+        fmt.Fprintf(os.Stderr, "  - author: %s\n", request.Source.ReplyFilter.AuthorId)
+        fmt.Fprintf(os.Stderr, "  - pattern: %s\n", request.Source.ReplyFilter.TextPattern)
+    }
 
     slack_client := slack.New(request.Source.Token)
 
-    params := slack.NewHistoryParameters()
-
-    if request_version, ok := request.Version["request"]; ok {
-        params.Oldest = request_version
-        fmt.Fprintf(os.Stderr, "Request version: %s\n", request_version)
-    }
-
-    params.Inclusive = true
-    params.Count = 100
-
-    var history *slack.History
-    history, err = slack_client.GetChannelHistory(request.Source.ChannelId, params)
-    if err != nil {
-		fatal("getting messages.", err)
-	}
+    history := get_messages(&request, slack_client)
 
     versions := []protocol.Version{}
 
     for _, msg := range history.Messages {
 
-        version, was_detected := process_message(&msg, request, slack_client)
+        accept, stop := process_message(&msg, &request, slack_client)
 
-        if was_detected { break }
-
-        if version != nil {
+        if accept {
+            version := protocol.Version{ "timestamp": msg.Msg.Timestamp }
             versions = append(versions, version)
         }
+
+        if stop { break }
     }
 
     response := protocol.CheckResponse{}
@@ -92,58 +85,80 @@ type Channels struct {
     meta ChannelsMeta
 }
 
-// Check if message is a request for us.
-// Check if the request was already handled, ignore it if so.
-// Extract requested version
-// Return extracted version (if any), and a flag whether the request was already handled.
+func get_messages(request *protocol.CheckRequest, slack_client *slack.Client) *slack.History {
 
-func process_message(message *slack.Message, request protocol.CheckRequest, slack_client *slack.Client) (protocol.Version, bool) {
+    params := slack.NewHistoryParameters()
+
+    if request_version, ok := request.Version["timestamp"]; ok {
+        params.Oldest = request_version
+        fmt.Fprintf(os.Stderr, "Request timestamp: %s\n", request_version)
+    }
+
+    params.Inclusive = true
+    params.Count = 100
+
+    var history *slack.History
+    history, err := slack_client.GetChannelHistory(request.Source.ChannelId, params)
+    if err != nil {
+        fatal("getting messages.", err)
+    }
+
+    return history
+}
+
+func process_message(message *slack.Message, request *protocol.CheckRequest,
+                     slack_client *slack.Client) (accept bool, stop bool) {
 
     is_reply := len(message.Msg.ThreadTimestamp) > 0 &&
         message.Msg.ThreadTimestamp != message.Msg.Timestamp
 
     if is_reply {
         fmt.Fprintf(os.Stderr, "Message %s is a reply. Skipping.\n", message.Msg.Timestamp)
-        return nil, false
+        return false, false
     }
 
-    is_by_bot := message.Msg.SubType == "bot_message" || len(message.Msg.User) == 0
+    fmt.Fprintf(os.Stderr, "- Message %s: %s \n", message.Msg.Timestamp, message.Msg.Text)
 
-    if is_by_bot {
-        fmt.Fprintf(os.Stderr, "Message %s is by a bot. Skipping.\n", message.Msg.Timestamp)
-        return nil, false
-    }
-
-    fmt.Fprintf(os.Stderr, "Message %s: %s \n", message.Msg.Timestamp, message.Msg.Text)
-
-    matches, is_matched, parse_err := protocol.ParseMessage(message.Msg.Text, &request.Source)
-
-    if parse_err != nil {
-        fatal("parsing message", parse_err)
-    }
-
-    if !is_matched {
-        fmt.Fprintf(os.Stderr, "Invalid format.\n")
-        return nil, false
-    }
-
-    fmt.Fprintf(os.Stderr, "Message parsed: %s\n", strings.Join(matches, ", "))
-
-    if request.Source.IgnoreReplied {
-        if has_reply(message, &request, slack_client) {
-            fmt.Fprintf(os.Stderr, "Message already replied to.\n")
-            return nil, true
+    if request.Source.Filter != nil {
+        fmt.Fprintf(os.Stderr, "Matching message...\n")
+        if !match_message(message, request.Source.Filter) {
+            fmt.Fprintf(os.Stderr, "Message did not matched.\n")
+            return false, false
         }
     }
 
-    version := protocol.Version{
-        "request": message.Msg.Timestamp,
+    if request.Source.ReplyFilter != nil {
+        fmt.Fprintf(os.Stderr, "Matching replies...\n")
+        if match_replies(message, request, slack_client) {
+            fmt.Fprintf(os.Stderr, "A reply was matched.\n")
+            return false, true
+        }
     }
 
-    return version, false
+    return true, false
 }
 
-func has_reply(message *slack.Message, request *protocol.CheckRequest, slack_client *slack.Client) bool {
+func match_message(message *slack.Message, filter *protocol.MessageFilter) bool {
+
+    author_id := filter.AuthorId
+    if len(author_id) > 0 && message.Msg.User != author_id {
+        fmt.Fprintf(os.Stderr, "Author %s is not %s.\n", message.Msg.User, author_id)
+        return false
+    }
+
+    text_pattern := filter.TextPattern
+    if text_pattern != nil && !text_pattern.MatchString(message.Msg.Text) {
+        fmt.Fprintf(os.Stderr, "Message text does not match pattern.\n")
+        return false
+    }
+
+    fmt.Fprintf(os.Stderr, "Message matched.\n")
+
+    return true
+}
+
+func match_replies(message *slack.Message, request *protocol.CheckRequest, slack_client *slack.Client) bool {
+
     if message.Msg.ReplyCount == 0 {
         return false
     }
@@ -154,8 +169,10 @@ func has_reply(message *slack.Message, request *protocol.CheckRequest, slack_cli
     }
 
     for _, reply := range replies {
-        has_reply := reply.User == request.Source.AgentId
-        if has_reply { return true }
+        fmt.Fprintf(os.Stderr, "- A reply: %s\n", reply.Msg.Text)
+        if match_message(&reply, request.Source.ReplyFilter) {
+            return true
+        }
     }
 
     return false
@@ -200,12 +217,6 @@ func get_channels(cursor string) (Channels) {
     if parse_err != nil { fatal("getting channels - parsing response body", parse_err) }
 
     return channels
-}
-
-func get_history(request protocol.CheckRequest, channel_id) {
-    url = "https://slack.com/api/channels.history?" +
-        "token=" + request.Source.Token
-    response, err := http.Get()
 }
 */
 

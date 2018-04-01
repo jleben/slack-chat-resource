@@ -6,7 +6,7 @@ import (
     "os"
     "path/filepath"
     "fmt"
-    "strings"
+    //"strings"
     "github.com/jakobleben/slack-request-resource/protocol"
     "github.com/nlopes/slack"
 )
@@ -73,17 +73,7 @@ func get(request *protocol.InRequest, destination string, slack_client *slack.Cl
 
     message := history.Messages[0]
 
-    matches, is_matched, parse_err := protocol.ParseMessage(message.Msg.Text, &request.Source)
-
-    if parse_err != nil {
-        fatal("parsing message", parse_err)
-    }
-
-    if !is_matched {
-        fatal1("Failed to parse message.")
-    }
-
-    fmt.Fprintf(os.Stderr, "Message parsed: %s\n", strings.Join(matches, ", "))
+    fmt.Fprintf(os.Stderr, "Text: %s\n", message.Msg.Text)
 
     {
         err := os.MkdirAll(destination, 0755)
@@ -92,11 +82,27 @@ func get(request *protocol.InRequest, destination string, slack_client *slack.Cl
         }
     }
 
-    for i, match  := range matches {
-        filename := fmt.Sprintf("part%d", i)
-        err := ioutil.WriteFile(filepath.Join(destination, filename), []byte(match), 0644)
+    parts := []string {}
+
+    if request.Params.TextPattern != nil {
+        fmt.Fprintf(os.Stderr, "Pattern: %s\n", request.Params.TextPattern)
+        parts = request.Params.TextPattern.FindStringSubmatch(message.Msg.Text)
+    }
+
+    {
+        err := ioutil.WriteFile(filepath.Join(destination, "text"), []byte(message.Msg.Text), 0644)
         if err != nil {
-            fatal("writing contents file", err)
+            fatal("writing text file", err)
+        }
+    }
+
+    for i := 1; i < len(parts); i++ {
+        part := parts[i]
+        fmt.Fprintf(os.Stderr, "Part: %s\n", part)
+        filename := fmt.Sprintf("text_part%d", i)
+        err := ioutil.WriteFile(filepath.Join(destination, filename), []byte(part), 0644)
+        if err != nil {
+            fatal("writing text part file", err)
         }
     }
 
@@ -106,8 +112,8 @@ func get(request *protocol.InRequest, destination string, slack_client *slack.Cl
 }
 
 func fatal(doing string, err error) {
-	println("error " + doing + ": " + err.Error())
-	os.Exit(1)
+    fmt.Fprintf(os.Stderr, "error " + doing + ": " + err.Error() + "\n")
+    os.Exit(1)
 }
 
 func fatal1(reason string) {

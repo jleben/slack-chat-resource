@@ -1,17 +1,24 @@
 package protocol
 
 import (
-    "strings"
+    //"strings"
     "regexp"
-    "errors"
+    //"errors"
+    "encoding/json"
 )
 
+type Regexp struct { regexp.Regexp }
+
+type MessageFilter struct {
+    AuthorId string `json:"author"`
+    TextPattern *Regexp `json:"text_pattern"`
+}
+
 type Source struct {
-    ChannelId string `json:"channel_id"`
-    AgentId string `json:"agent_id"`
     Token string `json:"token"`
-    Pattern string `json:"pattern"`
-    IgnoreReplied bool `json:"ignore_replied"`
+    ChannelId string `json:"channel_id"`
+    Filter *MessageFilter `json:"matching"`
+    ReplyFilter *MessageFilter `json:"not_replied_by"`
 }
 
 type Version map[string]string
@@ -26,11 +33,16 @@ type MetadataField struct {
 type InRequest struct {
     Source  Source  `json:"source"`
     Version Version `json:"version"`
+    Params InParams `json:"params"`
 }
 
 type InResponse struct {
     Version  Version  `json:"version"`
     Metadata Metadata `json:"metadata"`
+}
+
+type InParams struct {
+    TextPattern *Regexp `json:"text_pattern"`
 }
 
 type OutParams struct {
@@ -59,27 +71,15 @@ type SlackRequest struct {
     Contents string
 }
 
-func ParseMessage(text string, source *Source) ([]string, bool, error) {
+func (r *Regexp) UnmarshalJSON(payload []byte) error {
+    var pattern string
+    err := json.Unmarshal(payload, &pattern)
+    if err != nil { return err }
 
-    text = strings.TrimLeft(text, " ")
+    regexp, regexp_err := regexp.Compile(pattern)
+    if regexp_err != nil { return regexp_err }
 
-    bot_mention := "<@" + source.AgentId + ">"
-    if !strings.HasPrefix(text, bot_mention) { return nil, false, nil }
+    *r = Regexp{*regexp}
 
-    text = text[len(bot_mention):]
-    text = strings.TrimLeft(text, " ")
-
-    if len(source.Pattern) == 0 { return []string{text}, true, nil }
-
-    regexp, regexp_err := regexp.Compile("^" + source.Pattern + "$")
-    if regexp_err != nil {
-        return nil, false, errors.New("Invalid pattern")
-    }
-
-    matches := regexp.FindStringSubmatch(text)
-
-    matched := len(matches) > 0
-
-    return matches, matched, nil
+    return nil
 }
-

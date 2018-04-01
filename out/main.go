@@ -29,10 +29,6 @@ func main() {
         fatal1("Missing source field: token.")
     }
 
-    if len(request.Source.AgentId) == 0 {
-        fatal1("Missing source field: agent_id.")
-    }
-
     if len(request.Source.ChannelId) == 0 {
         fatal1("Missing source field: channel_id.")
     }
@@ -93,7 +89,7 @@ func send(thread string, contents string, request *protocol.OutRequest, slack_cl
 
 func fatal(doing string, err error) {
     fmt.Fprintf(os.Stderr, "error " + doing + ": " + err.Error() + "\n")
-	os.Exit(1)
+    os.Exit(1)
 }
 
 func fatal1(reason string) {
