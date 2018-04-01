@@ -57,9 +57,7 @@ func main() {
 
     slack_client := slack.New(request.Source.Token)
 
-    send(thread, text, &request, slack_client)
-
-    var response protocol.OutResponse
+    response := send(thread, text, &request, slack_client)
 
     response_err := json.NewEncoder(os.Stdout).Encode(&response)
     if response_err != nil {
@@ -81,15 +79,19 @@ func get_file_contents(path string) string {
     return string(data)
 }
 
-func send(thread string, text string, request *protocol.OutRequest, slack_client *slack.Client) {
+func send(thread string, text string, request *protocol.OutRequest, slack_client *slack.Client) protocol.OutResponse {
 
     params := slack.NewPostMessageParameters()
     params.ThreadTimestamp = thread
 
-    _, _, err := slack_client.PostMessage(request.Source.ChannelId, text, params)
+    _, timestamp, err := slack_client.PostMessage(request.Source.ChannelId, text, params)
     if err != nil {
         fatal("sending", err)
     }
+
+    var response protocol.OutResponse
+    response.Version = protocol.Version { "timestamp": timestamp }
+    return response
 }
 
 func fatal(doing string, err error) {
