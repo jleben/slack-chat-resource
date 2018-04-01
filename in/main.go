@@ -39,11 +39,11 @@ func main() {
         fatal1("Missing source field: channel_id.")
     }
 
-	if _,ok := request.Version["request"]; !ok {
-        fatal1("Missing version field: request")
+	if _,ok := request.Version["timestamp"]; !ok {
+        fatal1("Missing version field: timestamp")
     }
 
-    fmt.Fprintf(os.Stderr,"request version: %v\n", request.Version["request"])
+    fmt.Fprintf(os.Stderr,"Request version: %v\n", request.Version["timestamp"])
 
     slack_client := slack.New(request.Source.Token)
 
@@ -58,7 +58,7 @@ func main() {
 func get(request *protocol.InRequest, destination string, slack_client *slack.Client) protocol.InResponse {
 
     params := slack.NewHistoryParameters()
-    params.Latest = request.Version["request"]
+    params.Latest = request.Version["timestamp"]
     params.Inclusive = true
     params.Count = 1
 
