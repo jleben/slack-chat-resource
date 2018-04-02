@@ -168,7 +168,7 @@ func match_replies(message *slack.Message, request *protocol.CheckRequest, slack
         fatal("getting replies", err)
     }
 
-    for _, reply := range replies {
+    for _, reply := range replies[1:] {
         fmt.Fprintf(os.Stderr, "- A reply: %s\n", reply.Msg.Text)
         if match_message(&reply, request.Source.ReplyFilter) {
             return true
