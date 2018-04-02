@@ -46,9 +46,8 @@ type InParams struct {
 }
 
 type OutParams struct {
-    ThreadFile string `json:"thread_file"`
+    Thread string `json:"thread"`
     Text string `json:"text"`
-    TextFile string `json:"text_file"`
 }
 
 type OutRequest struct {

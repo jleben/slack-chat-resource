@@ -33,27 +33,20 @@ func main() {
         fatal1("Missing source field: channel_id.")
     }
 
-    if len(request.Params.TextFile) == 0 && len(request.Params.Text) == 0 {
-        fatal1("Missing params field: text or text_file.")
+    if len(request.Params.Text) == 0 {
+        fatal1("Missing params field: text.")
     }
 
-    fmt.Fprintf(os.Stderr, "thread file: %s\n", request.Params.ThreadFile)
-    fmt.Fprintf(os.Stderr, "text file: %s\n", request.Params.TextFile)
-    fmt.Fprintf(os.Stderr, "input text:\n%s\n", request.Params.Text)
-
-    text := request.Params.Text
-
-    if len(text) == 0 {
-        text = get_file_contents(filepath.Join(source_dir, request.Params.TextFile))
-    }
-
+    fmt.Fprintf(os.Stderr, "thread input: %s\n", request.Params.Thread)
     var thread string
-    if len(request.Params.ThreadFile) != 0 {
-        thread = get_file_contents(filepath.Join(source_dir, request.Params.ThreadFile))
+    if len(request.Params.Thread) != 0 {
+        thread = interpolate(request.Params.Thread, source_dir)
     }
+    fmt.Fprintf(os.Stderr, "thread output: %s\n", thread)
 
-    fmt.Fprintf(os.Stderr, "thread: %s\n", thread)
-    fmt.Fprintf(os.Stderr, "output text:\n%s\n", text)
+    fmt.Fprintf(os.Stderr, "text input:\n%s\n", request.Params.Text)
+    text := interpolate(request.Params.Text, source_dir)
+    fmt.Fprintf(os.Stderr, "text output:\n%s\n", text)
 
     slack_client := slack.New(request.Source.Token)
 
@@ -68,15 +61,48 @@ func main() {
 func get_file_contents(path string) string {
     file, open_err := os.Open(path)
     if open_err != nil {
-        fatal("opening contents file", open_err)
+        fatal("opening file", open_err)
     }
 
     data, read_err := ioutil.ReadAll(file)
     if read_err != nil {
-        fatal("reading contents file", read_err)
+        fatal("reading file", read_err)
     }
 
     return string(data)
+}
+
+func interpolate(text string, source_dir string) string {
+
+    var out_text string
+
+    start_var := 0
+    end_var := 0
+    inside_var := false
+    c0 := '_'
+
+    for pos, c1 := range text {
+        if inside_var {
+            if c0 == '}' && c1 == '}' {
+                inside_var = false
+                end_var = pos + 1
+                var_name := text[start_var+2:end_var-2]
+                value := get_file_contents(filepath.Join(source_dir, var_name))
+                out_text += value
+            }
+        } else {
+            if c0 == '{' && c1 == '{' {
+                inside_var = true
+                start_var = pos - 1
+                out_text += text[end_var:start_var]
+            }
+        }
+        c0 = c1
+    }
+
+    out_text += text[end_var:]
+
+    return out_text
 }
 
 func send(thread string, text string, request *protocol.OutRequest, slack_client *slack.Client) protocol.OutResponse {
