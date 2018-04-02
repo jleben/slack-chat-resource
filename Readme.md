@@ -36,6 +36,7 @@ The values of `matching` and `not_replied_by` represent message filters. They ar
 
 - `author`: *Optional*. User ID that must match the author of the message.
 - `text_pattern`: *Optional*. Regular expression that must match the message text.
+  See [Slack API](https://api.slack.com/docs/message-formatting) for details on text formatting.
 
 The resource only reports messages that begin new threads and not replies to other messages.
 
@@ -69,6 +70,7 @@ Reads the message with the requested timestamp and produces the following files:
 Parameters:
 
 - `text_pattern`: *Optional*. A regular expression to match against the message text. The text matched by each capturing group is stored into a file `text_part<num>` where `<num>` is the group index starting with 1. This index is an integer representing the relative order of the beginnings of groups from left to right.
+  See [Slack API](https://api.slack.com/docs/message-formatting) for details on text formatting.
 
 ### Example
 
