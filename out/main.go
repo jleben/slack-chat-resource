@@ -6,7 +6,7 @@ import (
     "os"
     "path/filepath"
     "fmt"
-    "github.com/jakobleben/slack-request-resource/protocol"
+    "github.com/jakobleben/slack-chat-resource/protocol"
     "github.com/nlopes/slack"
 )
 

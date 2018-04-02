@@ -1,20 +1,20 @@
-# Slack Request Resource
+# Slack Chat Resource
 
 A Concourse resource to read, act on, and reply to messages on Slack.
 
-Docker Store: [jakobleben/slack-request-resource](https://store.docker.com/community/images/jakobleben/slack-request-resource)
+Docker Store: [jakobleben/slack-chat-resource](https://store.docker.com/community/images/jakobleben/slack-chat-resource)
 
 ## Usage
 
     resource_types:
-        - name: slack-request-resource
+        - name: slack-chat-resource
           type: docker-image
           source:
-            repository: jakobleben/slack-request-resource
+            repository: jakobleben/slack-chat-resource
 
     resources:
         - name: slack
-          type: slack-request-resource
+          type: slack-chat-resource
           source: ...
 
 ## Source Configuration
@@ -47,7 +47,7 @@ If `source` has a `not_replied_by` filter, and it matches a message that also ma
 
     resources:
       - name: slack
-        type: slack-request-resource
+        type: slack-chat-resource
         source:
           token: "xxxx-xxxxxxxxxx-xxxx"
           channel_id: "C11111111"

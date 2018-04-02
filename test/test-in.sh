@@ -7,4 +7,4 @@ cat "$request" | docker run --rm -i \
 -e BUILD_PIPELINE_NAME=mypipe \
 -e BUILD_TEAM_NAME=myteam \
 -e ATC_EXTERNAL_URL="https://example.com" \
--v "$(pwd)/in:/tmp/resource/in" jakobleben/slack-request-resource /opt/resource/in /tmp/resource/in
+-v "$(pwd)/in:/tmp/resource/in" jakobleben/slack-chat-resource /opt/resource/in /tmp/resource/in

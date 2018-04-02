@@ -1,2 +1,2 @@
 #! /bin/bash
-docker build -t jakobleben/slack-request-resource .
+docker build -t jakobleben/slack-chat-resource .
