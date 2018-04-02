@@ -7,7 +7,7 @@ There are two resource types:
 - `slack-read-resource`: For reading messages.
 - `slack-post-resource`: For posting messages.
 
-The reason for two types is that a system most usually does not want to respond to messages that it posts itself. Concourse assumes that an output of a resource is also a valid input for the same resource. Therefore, we need to use separate resources for reading an posting. Since using a single resource has no benefits over separate resources, the reading and posting is split into two resource types.
+There are two resource types because a system does not want to respond to messages that it posts itself. Concourse assumes that an output of a resource is also a valid input. Therefore, separate resources are used for reading and posting. Since using a single resource has no benefits over separate resources, reading and posting are split into two resource types.
 
 Docker Store:
 
