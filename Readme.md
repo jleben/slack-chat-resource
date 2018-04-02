@@ -29,8 +29,8 @@ The `source` field may have the following elements:
 
 - `token`: *Required*. A Slack API token that allows reading all messages on a selected channel and posting on it.
 - `channel_id`: *Required*. The selected channel ID. The resource only reads and posts messages on this channel.
-- `matching`: *Optional*. Only reports messages matching this filter. See below for details.
-- `not_replied_by`: *Optional*. Ignores messages that have a reply matching this filter. See below for details.
+- `matching`: *Optional*. Only report messages matching this filter. See below for details.
+- `not_replied_by`: *Optional*. Ignore messages that have a reply matching this filter. See below for details.
 
 The values of `matching` and `not_replied_by` represent message filters. They are maps with the following elements:
 
@@ -58,7 +58,7 @@ If `source` has a `not_replied_by` filter, and it matches a message that also ma
           not_replied_by:
             author: U22222222
 
-This configures a resource reading messages from channel with ID `C11111111`. It reads only messages the begin by mentioning the user with ID `U22222222`. It ignores messages already replied to by that same user.
+This configures a resource reading messages from channel with ID `C11111111`. It reads only messages that begin by mentioning the user with ID `U22222222`. It ignores messages already replied to by that same user.
 
 ## `get`: Read message
 
