@@ -141,8 +141,8 @@ func process_message(message *slack.Message, request *protocol.CheckRequest,
 func match_message(message *slack.Message, filter *protocol.MessageFilter) bool {
 
     author_id := filter.AuthorId
-    if len(author_id) > 0 && message.Msg.User != author_id {
-        fmt.Fprintf(os.Stderr, "Author %s is not %s.\n", message.Msg.User, author_id)
+    if len(author_id) > 0 && message.Msg.User != author_id && message.Msg.BotID != author_id {
+        fmt.Fprintf(os.Stderr, "Author is not %s.\n", author_id)
         return false
     }
 
