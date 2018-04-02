@@ -4,38 +4,61 @@ A Concourse resource to read and reply to messages on Slack.
 
 Docker Store: [jakobleben/slack-request-resource](https://store.docker.com/community/images/jakobleben/slack-request-resource)
 
+## Usage
+
+    resource_types:
+        - name: slack-request-resource
+          type: docker-image
+          source:
+            repository: jakobleben/slack-request-resource
+
+    resources:
+        - name: slack
+          type: slack-request-resource
+          source: ...
+
 ## Source Configuration
 
+When the resource is checked, it reads messages according to the `source` configuration. For each message that matches the configuration, it outputs a resource version in the form:
+
+    timestamp: 1234567890.123
+
+A timestamp uniquely identifies a message within a channel (see [Slack API](https://api.slack.com/events/message) for details).
+
+The `source` field may have the following elements:
+
 - `token`: *Required*. A Slack API token that allows reading all messages on a selected channel and posting on it.
-- `channel_id`: *Required*. The selected channel ID. The resource will only read messages and post on this channel.
-- `matching`: *Optional*. Only read messages matching this filter. See below for details.
-- `not_replied_by`: *Optional*. Ignore messages that have a reply matching this filter. See below for details.
+- `channel_id`: *Required*. The selected channel ID. The resource only reads and posts messages on this channel.
+- `matching`: *Optional*. Only reports messages matching this filter. See below for details.
+- `not_replied_by`: *Optional*. Ignores messages that have a reply matching this filter. See below for details.
 
-The value of `matching` and `not_replied_by` represents a message filter. It is a map with the following elements:
+The values of `matching` and `not_replied_by` represent message filters. They are maps with the following elements:
 
-- `author`: User ID representing the author of the message.
-- `text_pattern`: Regular expression to match against the message text.
+- `author`: *Optional*. User ID that must match the author of the message.
+- `text_pattern`: *Optional*. Regular expression that must match the message text.
 
-## Behavior
+The resource only reports messages that begin new threads and not replies to other messages.
 
-### `check`: List messages
+When given a message timestamp as the current version, it only reads messages with that timestamp and later. In any case though, it reads at most 100 of the latest messages. Therefore, the resource must be checked often enough to avoid missing messages.
 
-When the resource is checked, it reads messages on the selected channel and reports their timestamps as versions, for example:
+If `source` has a `not_replied_by` filter, and it matches a message that also matches the `matching` filter, then all messages older than the latest such message are also considered obsolete and are not read.
 
-    { "timestamp": "<message timestamp>" }
+### Example
 
-It always reads at most 100 of the latest messages
+    resources:
+      - name: slack
+        type: slack-request-resource
+        source:
+          token: "xxxx-xxxxxxxxxx-xxxx"
+          channel_id: "C11111111"
+          matching:
+            text_pattern: '<@U22222222>\\s+(.+)'
+          not_replied_by:
+            author: U22222222
 
-Moreover, if given a message timestamp as the current `version`, it only reads messages with that timestamp and later.
+This configures a resource reading messages from channel with ID `C11111111`. It reads only messages the begin by mentioning the user with ID `U22222222`. It ignores messages already replied to by that same user.
 
-It only reports messages that start threads and not replies to other messages.
-
-If `source` has a `matching` filter, only messages that match the filter are reported.
-
-If `source` has a `not_replied_by` filter, then a message that would otherwise be reported is ignored if it has a reply that matches the filter. In addition, only message later than the latest such message are reported.
-
-
-### `in`: Read message
+## `get`: Read message
 
 Reads the message with the requested timestamp and produces the following files:
 
@@ -47,7 +70,7 @@ Parameters:
 
 - `text_pattern`: *Optional*. A regular expression to match against the message text. The text matched by each capturing group is stored into a file `text_part<num>` where `<num>` is the group index starting with 1. This index is an integer representing the relative order of the beginnings of groups from left to right.
 
-For example:
+### Example
 
     - get: slack
       params:
@@ -61,7 +84,7 @@ When this configuration sees a message with the text `abc 123` and timestamp `11
 - `text_part2`: `123`
 
 
-### `out`: Post message
+## `put`: Post message
 
 Posts a message to the selected channel.
 
@@ -72,13 +95,15 @@ Parameters:
 
 All parameters allow insertion of contents of arbitrary files. Each occurence of the pattern `{{filename}}` is substituted with the contents of the file `filename`.
 
-For example, consider a job with the `get` example above followed by this:
+### Example
+
+Consider a job with the `get` example above followed by this:
 
     - put: slack
       params:
         thread: "{{slack/timestamp}}"
         text: "Hi {{slack/text_part1}}! I will do {{slack/text_part2}} right away!"
 
-This will reply to the message read by the `put` step (since `thread` is the timestamp of the original message), and the reply will read:
+This will reply to the message read by the `get` step (since `thread` is the timestamp of the original message), and the reply will read:
 
     Hi abc! I will do 123 right away!
