@@ -1,34 +1,48 @@
-# Slack Chat Resource
+# Slack Chat Resources
 
-A Concourse resource to read, act on, and reply to messages on Slack.
+This repository provides Concourse resource types to read, act on, and reply to messages on Slack.
 
-Docker Store: [jakobleben/slack-chat-resource](https://store.docker.com/community/images/jakobleben/slack-chat-resource)
+There are two resource types:
 
-## Usage
+- `slack-read-resource`: For reading messages.
+- `slack-post-resource`: For posting messages.
 
-    resource_types:
-        - name: slack-chat-resource
-          type: docker-image
-          source:
-            repository: jakobleben/slack-chat-resource
+The reason for two types is that a system most usually does not want to respond to messages that it posts itself. Concourse assumes that an output of a resource is also a valid input for the same resource. Therefore, we need to use separate resources for reading an posting. Since using a single resource has no benefits over separate resources, the reading and posting is split into two resource types.
 
-    resources:
-        - name: slack
-          type: slack-chat-resource
-          source: ...
+Docker Store:
 
-## Source Configuration
+- [jakobleben/slack-read-resource](https://store.docker.com/community/images/jakobleben/slack-read-resource)
+- [jakobleben/slack-post-resource](https://store.docker.com/community/images/jakobleben/slack-post-resource)
 
-When the resource is checked, it reads messages according to the `source` configuration. For each message that matches the configuration, it outputs a resource version in the form:
+## Version Format
+
+Timestamps of Slack messages are used as resource versions. For example, a message may be represented by a version like this:
 
     timestamp: 1234567890.123
 
-A timestamp uniquely identifies a message within a channel (see [Slack API](https://api.slack.com/events/message) for details).
+A timestamp uniquely identifies a message within a channel. See [Slack API](https://api.slack.com/events/message) for details.
 
-The `source` field may have the following elements:
+## Reading Messages
 
-- `token`: *Required*. A Slack API token that allows reading all messages on a selected channel and posting on it.
-- `channel_id`: *Required*. The selected channel ID. The resource only reads and posts messages on this channel.
+Usage in a pipeline:
+
+    resource_types:
+        - name: slack-read-resource
+          type: docker-image
+          source:
+            repository: jakobleben/slack-read-resource
+
+    resources:
+        - name: slack-in
+          type: slack-read-resource
+          source: ...
+
+### Source Configuration
+
+The `source` field configures the resource for reading messages from a specific channel. It allows filtering messages by their author and text pattern:
+
+- `token`: *Required*. A Slack API token that allows reading all messages on a selected channel.
+- `channel_id`: *Required*. The selected channel ID. The resource only reads messages on this channel.
 - `matching`: *Optional*. Only report messages matching this filter. See below for details.
 - `not_replied_by`: *Optional*. Ignore messages that have a reply matching this filter. See below for details.
 
@@ -47,11 +61,11 @@ When given a message timestamp as the current version, it only reads messages wi
 
 If `source` has a `not_replied_by` filter, and it matches a message that also matches the `matching` filter, then all messages older than the latest such message are also considered obsolete and are not read.
 
-### Example
+#### Example
 
     resources:
-      - name: slack
-        type: slack-chat-resource
+      - name: slack-in
+        type: slack-read-resource
         source:
           token: "xxxx-xxxxxxxxxx-xxxx"
           channel_id: "C11111111"
@@ -62,7 +76,7 @@ If `source` has a `not_replied_by` filter, and it matches a message that also ma
 
 This configures a resource reading messages from channel with ID `C11111111`. It reads only messages that begin by mentioning the user with ID `U22222222`. It ignores messages already replied to by that same user.
 
-## `get`: Read message
+### `get`: Read a Message
 
 Reads the message with the requested timestamp and produces the following files:
 
@@ -78,9 +92,9 @@ Parameters:
   Wrap in single quotes instead of double, to avoid having to escape `\`.
   See [Slack API](https://api.slack.com/docs/message-formatting) for details on text formatting.
 
-### Example
+#### Example
 
-    - get: slack
+    - get: slack-in
       params:
           text_pattern: '([A-Z]+) ([0-9]+)'
 
@@ -92,7 +106,40 @@ When this configuration sees a message with the text `abc 123` and timestamp `11
 - `text_part2`: `123`
 
 
-## `put`: Post message
+## Posting Messages
+
+Usage in a pipeline:
+
+    resource_types:
+        - name: slack-post-resource
+          type: docker-image
+          source:
+            repository: jakobleben/slack-post-resource
+
+    resources:
+        - name: slack-out
+          type: slack-post-resource
+          source: ...
+
+### Source Configuration
+
+The `source` field configures the resource for posting on a specific channel:
+
+- `token`: *Required*. A Slack API token that allows posting on a selected channel.
+- `channel_id`: *Required*. The selected channel ID. The resource only posts messages on this channel.
+
+#### Example
+
+    resources:
+      - name: slack-out
+        type: slack-post-resource
+        source:
+          token: "xxxx-xxxxxxxxxx-xxxx"
+          channel_id: "C11111111"
+
+This configures the resource to post on the channel with ID `C11111111`.
+
+### `put`: Post a Message
 
 Posts a message to the selected channel.
 
@@ -105,12 +152,12 @@ All parameters allow insertion of contents of arbitrary files. Each occurence of
 
 ### Example
 
-Consider a job with the `get` example above followed by this:
+Consider a job with the `get: slack-in` step from the example above followed by this step:
 
-    - put: slack
+    - put: slack-out
       params:
-        thread: "{{slack/timestamp}}"
-        text: "Hi {{slack/text_part1}}! I will do {{slack/text_part2}} right away!"
+        thread: "{{slack-in/timestamp}}"
+        text: "Hi {{slack-in/text_part1}}! I will do {{slack-in/text_part2}} right away!"
 
 This will reply to the message read by the `get` step (since `thread` is the timestamp of the original message), and the reply will read:
 
