@@ -1,6 +1,6 @@
 # Slack Request Resource
 
-A Concourse resource to read and reply to messages on Slack.
+A Concourse resource to read, act on, and reply to messages on Slack.
 
 Docker Store: [jakobleben/slack-request-resource](https://store.docker.com/community/images/jakobleben/slack-request-resource)
 
