@@ -77,7 +77,7 @@ For example, consider a job with the `get` example above followed by this:
     - put: slack
       params:
         thread: "{{slack/timestamp}}"
-        text: "Hi {{slack/part1}}! I will do {{slack/part2}} right away!"
+        text: "Hi {{slack/text_part1}}! I will do {{slack/text_part2}} right away!"
 
 This will reply to the message read by the `put` step (since `thread` is the timestamp of the original message), and the reply will read:
 
