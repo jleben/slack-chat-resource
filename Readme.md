@@ -41,6 +41,7 @@ Reads the message with the requested timestamp and produces the following files:
 
 - `timestamp`: The message timestamp.
 - `text`: The message text.
+- `text_part1`, `text_part2`, ...: Parts of text as parsed using the `text_pattern` paremeter described below.
 
 Parameters:
 
