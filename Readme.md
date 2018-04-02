@@ -34,7 +34,8 @@ The `source` field may have the following elements:
 
 The values of `matching` and `not_replied_by` represent message filters. They are maps with the following elements:
 
-- `author`: *Optional*. User ID that must match the author of the message.
+- `author`: *Optional*. User ID that must match the author of the message - either the `user` or the `bot_id` field.
+  See [Slack API](https://api.slack.com/events/message) regarding authorship.
 - `text_pattern`: *Optional*. Regular expression that must match the message text.
   See [Slack API](https://api.slack.com/docs/message-formatting) for details on text formatting.
 
