@@ -7,7 +7,7 @@ import (
     "path/filepath"
     "fmt"
     //"strings"
-    "github.com/jakobleben/slack-chat-resource/protocol"
+    "github.com/jleben/slack-chat-resource/utils"
     "github.com/nlopes/slack"
 )
 
@@ -22,7 +22,7 @@ func main() {
 
     destination := os.Args[1]
 
-    var request protocol.InRequest
+    var request utils.InRequest
 
     var err error
 
@@ -55,7 +55,7 @@ func main() {
     }
 }
 
-func get(request *protocol.InRequest, destination string, slack_client *slack.Client) protocol.InResponse {
+func get(request *utils.InRequest, destination string, slack_client *slack.Client) utils.InResponse {
 
     params := slack.NewHistoryParameters()
     params.Latest = request.Version["timestamp"]
@@ -113,7 +113,7 @@ func get(request *protocol.InRequest, destination string, slack_client *slack.Cl
         }
     }
 
-    var response protocol.InResponse
+    var response utils.InResponse
     response.Version = request.Version
     return response
 }

@@ -9,13 +9,13 @@ import (
     "fmt"
     //"strings"
     //"net/http"
-    "github.com/jakobleben/slack-chat-resource/protocol"
+    "github.com/jleben/slack-chat-resource/utils"
     "github.com/nlopes/slack"
 )
 
 func main() {
 
-    var request protocol.CheckRequest
+    var request utils.CheckRequest
 
     var err error
 
@@ -48,21 +48,21 @@ func main() {
 
     history := get_messages(&request, slack_client)
 
-    versions := []protocol.Version{}
+    versions := []utils.Version{}
 
     for _, msg := range history.Messages {
 
         accept, stop := process_message(&msg, &request, slack_client)
 
         if accept {
-            version := protocol.Version{ "timestamp": msg.Msg.Timestamp }
+            version := utils.Version{ "timestamp": msg.Msg.Timestamp }
             versions = append(versions, version)
         }
 
         if stop { break }
     }
 
-    response := protocol.CheckResponse{}
+    response := utils.CheckResponse{}
     for i := len(versions) - 1; i >= 0; i--  {
         response = append(response, versions[i])
     }
@@ -85,7 +85,7 @@ type Channels struct {
     meta ChannelsMeta
 }
 
-func get_messages(request *protocol.CheckRequest, slack_client *slack.Client) *slack.History {
+func get_messages(request *utils.CheckRequest, slack_client *slack.Client) *slack.History {
 
     params := slack.NewHistoryParameters()
 
@@ -106,7 +106,7 @@ func get_messages(request *protocol.CheckRequest, slack_client *slack.Client) *s
     return history
 }
 
-func process_message(message *slack.Message, request *protocol.CheckRequest,
+func process_message(message *slack.Message, request *utils.CheckRequest,
                      slack_client *slack.Client) (accept bool, stop bool) {
 
     is_reply := len(message.Msg.ThreadTimestamp) > 0 &&
@@ -138,7 +138,7 @@ func process_message(message *slack.Message, request *protocol.CheckRequest,
     return true, false
 }
 
-func match_message(message *slack.Message, filter *protocol.MessageFilter) bool {
+func match_message(message *slack.Message, filter *utils.MessageFilter) bool {
 
     author_id := filter.AuthorId
     if len(author_id) > 0 && message.Msg.User != author_id && message.Msg.BotID != author_id {
@@ -157,7 +157,7 @@ func match_message(message *slack.Message, filter *protocol.MessageFilter) bool 
     return true
 }
 
-func match_replies(message *slack.Message, request *protocol.CheckRequest, slack_client *slack.Client) bool {
+func match_replies(message *slack.Message, request *utils.CheckRequest, slack_client *slack.Client) bool {
 
     if message.Msg.ReplyCount == 0 {
         return false
@@ -179,7 +179,7 @@ func match_replies(message *slack.Message, request *protocol.CheckRequest, slack
 }
 
 /*
-func get_channel_id(request protocol.CheckRequest) {
+func get_channel_id(request utils.CheckRequest) {
 
     var done = false
     var cursor string

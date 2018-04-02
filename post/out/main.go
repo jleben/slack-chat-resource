@@ -6,7 +6,7 @@ import (
     "os"
     "path/filepath"
     "fmt"
-    "github.com/jakobleben/slack-chat-resource/protocol"
+    "github.com/jleben/slack-chat-resource/utils"
     "github.com/nlopes/slack"
 )
 
@@ -18,7 +18,7 @@ func main() {
 
     source_dir := os.Args[1]
 
-    var request protocol.OutRequest
+    var request utils.OutRequest
 
     request_err := json.NewDecoder(os.Stdin).Decode(&request)
     if request_err != nil {
@@ -105,7 +105,7 @@ func interpolate(text string, source_dir string) string {
     return out_text
 }
 
-func send(thread string, text string, request *protocol.OutRequest, slack_client *slack.Client) protocol.OutResponse {
+func send(thread string, text string, request *utils.OutRequest, slack_client *slack.Client) utils.OutResponse {
 
     params := slack.NewPostMessageParameters()
     params.ThreadTimestamp = thread
@@ -115,8 +115,8 @@ func send(thread string, text string, request *protocol.OutRequest, slack_client
         fatal("sending", err)
     }
 
-    var response protocol.OutResponse
-    response.Version = protocol.Version { "timestamp": timestamp }
+    var response utils.OutResponse
+    response.Version = utils.Version { "timestamp": timestamp }
     return response
 }
 
