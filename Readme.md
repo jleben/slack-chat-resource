@@ -145,10 +145,29 @@ Posts a message to the selected channel.
 
 Parameters:
 
-- `text`: *Required*. The text to post.
-- `thread`: *Optional*. The timestamp of the message to reply to. If missing, starts a new thread.
+- `message`: *Optional*. The message to send described in YAML.
+- `message_file`: *Optional*. The file containing the message to send described in JSON.
 
-All parameters allow insertion of contents of arbitrary files. Each occurence of the pattern `{{filename}}` is substituted with the contents of the file `filename`.
+Either `message` or `message_file` must be present. If both are present, `message_file` takes precedence and `message` is ignored.
+
+The message is described just as the argument to the [`chat.postMessage`](https://api.slack.com/methods/chat.postMessage) method of the Slack API. All fields are supported, except that `token` and `channel` are ignored and instead the resource configuration in `source` is used.
+
+When using `message`, some message parameters support string interpolation to insert contents of arbitrary files.
+Each occurence of the pattern `{{filename}}` is substituted with the contents of the file `filename`.
+
+The following message fields support string interpolation:
+
+- `text`
+- `thread_ts`
+
+The following fields of an attachment support string interpolation:
+
+- `fallback`
+- `title`
+- `title_link`
+- `pretext`
+- `text`
+- `footer`
 
 ### Example
 
@@ -156,8 +175,9 @@ Consider a job with the `get: slack-in` step from the example above followed by 
 
     - put: slack-out
       params:
-        thread: "{{slack-in/timestamp}}"
-        text: "Hi {{slack-in/text_part1}}! I will do {{slack-in/text_part2}} right away!"
+        message:
+            thread_ts: "{{slack-in/timestamp}}"
+            text: "Hi {{slack-in/text_part1}}! I will do {{slack-in/text_part2}} right away!"
 
 This will reply to the message read by the `get` step (since `thread` is the timestamp of the original message), and the reply will read:
 
