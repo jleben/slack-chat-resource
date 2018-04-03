@@ -160,8 +160,12 @@ Either `message` or `message_file` must be present. If both are present, `messag
 
 The message is described just as the argument to the [`chat.postMessage`](https://api.slack.com/methods/chat.postMessage) method of the Slack API. All fields are supported, except that `token` and `channel` are ignored and instead the resource configuration in `source` is used.
 
-When using `message`, some message parameters support string interpolation to insert contents of arbitrary files.
-Each occurence of the pattern `{{filename}}` is substituted with the contents of the file `filename`.
+When using `message`, some message parameters support string interpolation to insert contents of arbitrary files or values of environment variables. The following table gives rules for substitution:
+
+| Pattern | Substituted By |
+|---------|----------------|
+| `{{filename}}` | Contents of file `filename` |
+| `{{$variable}}` | Value of environment variable `variable` |
 
 The following message fields support string interpolation:
 
