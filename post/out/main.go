@@ -33,6 +33,10 @@ func main() {
         fatal1("Missing source field: channel_id.")
     }
 
+    if len(request.Params.MessageFile) == 0 && request.Params.Message == nil {
+        fatal1("Missing params field: message or message_file.")
+    }
+
     var message *utils.OutMessage
 
     if len(request.Params.MessageFile) != 0 {
