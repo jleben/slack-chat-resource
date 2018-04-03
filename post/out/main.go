@@ -118,8 +118,17 @@ func interpolate(text string, source_dir string) string {
             if c0 == '}' && c1 == '}' {
                 inside_var = false
                 end_var = pos + 1
-                var_name := text[start_var+2:end_var-2]
-                value := get_file_contents(filepath.Join(source_dir, var_name))
+
+                var value string
+
+                if text[start_var+2] == '$' {
+                    var_name := text[start_var+3:end_var-2]
+                    value = os.Getenv(var_name)
+                } else {
+                    var_name := text[start_var+2:end_var-2]
+                    value = get_file_contents(filepath.Join(source_dir, var_name))
+                }
+
                 out_text += value
             }
         } else {
