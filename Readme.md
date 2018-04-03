@@ -9,6 +9,14 @@ There are two resource types:
 
 There are two resource types because a system does not want to respond to messages that it posts itself. Concourse assumes that an output of a resource is also a valid input. Therefore, separate resources are used for reading and posting. Since using a single resource has no benefits over separate resources, reading and posting are split into two resource types.
 
+The posting resource offers similar functionality to the older
+[slack-notification-resource](https://github.com/cloudfoundry-community/slack-notification-resource),
+with the following benefits:
+
+- Support for replying to threads.
+- More powerful interpolation of contents of arbitrary files into message text and other parameters.
+- Written in Go as opposed to Bash, in case you care about this :).
+
 Docker Store:
 
 - [jakobleben/slack-read-resource](https://store.docker.com/community/images/jakobleben/slack-read-resource)
