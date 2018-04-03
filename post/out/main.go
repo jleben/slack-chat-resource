@@ -33,28 +33,56 @@ func main() {
         fatal1("Missing source field: channel_id.")
     }
 
-    if len(request.Params.Text) == 0 {
-        fatal1("Missing params field: text.")
+    var message *utils.OutMessage
+
+    if len(request.Params.MessageFile) != 0 {
+        message = new(utils.OutMessage)
+        read_message_file(filepath.Join(source_dir,request.Params.MessageFile), message)
+    } else {
+        message = request.Params.Message
+        interpolate_message(message, source_dir)
     }
 
-    fmt.Fprintf(os.Stderr, "thread input: %s\n", request.Params.Thread)
-    var thread string
-    if len(request.Params.Thread) != 0 {
-        thread = interpolate(request.Params.Thread, source_dir)
+    {
+        fmt.Fprintf(os.Stderr, "About to send this message:\n")
+        m, _ := json.MarshalIndent(message, "", "  ")
+        fmt.Fprintf(os.Stderr, "%s\n", m)
     }
-    fmt.Fprintf(os.Stderr, "thread output: %s\n", thread)
-
-    fmt.Fprintf(os.Stderr, "text input:\n%s\n", request.Params.Text)
-    text := interpolate(request.Params.Text, source_dir)
-    fmt.Fprintf(os.Stderr, "text output:\n%s\n", text)
 
     slack_client := slack.New(request.Source.Token)
 
-    response := send(thread, text, &request, slack_client)
+    response := send(message, &request, slack_client)
 
     response_err := json.NewEncoder(os.Stdout).Encode(&response)
     if response_err != nil {
         fatal("encoding response", response_err)
+    }
+}
+
+func read_message_file(path string, message * utils.OutMessage) {
+    file, open_err := os.Open(path)
+    if open_err != nil {
+        fatal("opening message file", open_err)
+    }
+
+    read_err := json.NewDecoder(file).Decode(message)
+    if read_err != nil {
+        fatal("reading message file", read_err)
+    }
+}
+
+func interpolate_message(message * utils.OutMessage, source_dir string) {
+    message.Text = interpolate(message.Text, source_dir)
+    message.ThreadTimestamp = interpolate(message.ThreadTimestamp, source_dir)
+
+    for i := 0; i < len(message.Attachments); i++ {
+        attachment := &message.Attachments[i]
+        attachment.Fallback = interpolate(attachment.Fallback, source_dir)
+        attachment.Title = interpolate(attachment.Title, source_dir)
+        attachment.TitleLink = interpolate(attachment.TitleLink, source_dir)
+        attachment.Pretext = interpolate(attachment.Pretext, source_dir)
+        attachment.Text = interpolate(attachment.Text, source_dir)
+        attachment.Footer = interpolate(attachment.Footer, source_dir)
     }
 }
 
@@ -105,12 +133,10 @@ func interpolate(text string, source_dir string) string {
     return out_text
 }
 
-func send(thread string, text string, request *utils.OutRequest, slack_client *slack.Client) utils.OutResponse {
+func send(message *utils.OutMessage, request *utils.OutRequest, slack_client *slack.Client) utils.OutResponse {
 
-    params := slack.NewPostMessageParameters()
-    params.ThreadTimestamp = thread
+    _, timestamp, err := slack_client.PostMessage(request.Source.ChannelId, message.Text, message.PostMessageParameters)
 
-    _, timestamp, err := slack_client.PostMessage(request.Source.ChannelId, text, params)
     if err != nil {
         fatal("sending", err)
     }
@@ -121,7 +147,7 @@ func send(thread string, text string, request *utils.OutRequest, slack_client *s
 }
 
 func fatal(doing string, err error) {
-    fmt.Fprintf(os.Stderr, "error " + doing + ": " + err.Error() + "\n")
+    fmt.Fprintf(os.Stderr, "Error " + doing + ": " + err.Error() + "\n")
     os.Exit(1)
 }
 

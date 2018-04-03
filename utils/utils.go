@@ -5,6 +5,7 @@ import (
     "regexp"
     //"errors"
     "encoding/json"
+    "github.com/nlopes/slack"
 )
 
 type Regexp struct { regexp.Regexp }
@@ -46,13 +47,18 @@ type InParams struct {
 }
 
 type OutParams struct {
-    Thread string `json:"thread"`
-    Text string `json:"text"`
+    Message *OutMessage `json:"message"`
+    MessageFile string `json:"message_file"`
 }
 
 type OutRequest struct {
     Source  Source  `json:"source"`
     Params OutParams `json:"params"`
+}
+
+type OutMessage struct {
+    Text string `json:"text"`
+    slack.PostMessageParameters
 }
 
 type OutResponse struct {
