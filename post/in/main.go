@@ -4,10 +4,14 @@ import (
     "os"
     "fmt"
     "encoding/json"
+    "io/ioutil"
+    "path/filepath"
 )
 
 func main() {
     var request map[string]interface{}
+
+    destination := os.Args[1]
 
     {
         err := json.NewDecoder(os.Stdin).Decode(&request)
@@ -18,6 +22,13 @@ func main() {
 
     response := make(map[string]interface{})
     response["version"] = request["version"]
+
+    {
+        err := ioutil.WriteFile(filepath.Join(destination, "timestamp"), []byte(request["version"].(string)) , 0644)
+        if err != nil {
+            fatal("writing timestamp file", err)
+        }
+    }
 
     {
         err := json.NewEncoder(os.Stdout).Encode(&response)
