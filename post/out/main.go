@@ -148,7 +148,7 @@ func interpolate(text string, source_dir string) string {
 
 func send(message *utils.OutMessage, request *utils.OutRequest, slack_client *slack.Client) utils.OutResponse {
 
-    _, timestamp, err := slack_client.PostMessage(request.Source.ChannelId, message.Text, message.PostMessageParameters)
+    _, timestamp, err := slack_client.PostMessage(request.Source.ChannelId, slack.MsgOptionText(message.Text, false), slack.MsgOptionAttachments(message.Attachments...))
 
     if err != nil {
         fatal("sending", err)
