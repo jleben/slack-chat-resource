@@ -6,25 +6,34 @@ import (
     "encoding/json"
     "io/ioutil"
     "path/filepath"
+    "github.com/jleben/slack-chat-resource/utils"
 )
 
 func main() {
-    var request map[string]interface{}
-
+	if len(os.Args) < 2 {
+		println("usage: " + os.Args[0] + " <destination>")
+		os.Exit(1)
+    }
+    
     destination := os.Args[1]
 
-    {
-        err := json.NewDecoder(os.Stdin).Decode(&request)
-        if err != nil {
-            fatal("parsing request", err)
-        }
+    var request utils.InRequest
+
+    err := json.NewDecoder(os.Stdin).Decode(&request)
+    if err != nil {
+        fatal("parsing request", err)
     }
 
-    response := make(map[string]interface{})
-    response["version"] = request["version"]
+    var response utils.InResponse
+    response.Version = request.Version
 
     {
-        err := ioutil.WriteFile(filepath.Join(destination, "timestamp"), []byte(request["version"].(string)) , 0644)
+        fmt.Fprintf(os.Stderr, "The Latest versions is:\n")
+        fmt.Fprintf(os.Stderr, "%s\n", request.Version["timestamp"])
+    }
+
+    {
+        err := ioutil.WriteFile(filepath.Join(destination, "timestamp"), []byte(request.Version["timestamp"]) , 0644)
         if err != nil {
             fatal("writing timestamp file", err)
         }
