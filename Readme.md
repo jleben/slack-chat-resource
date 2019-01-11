@@ -30,7 +30,7 @@ Timestamps of Slack messages are used as resource versions. For example, a messa
 
 A timestamp uniquely identifies a message within a channel. See [Slack API](https://api.slack.com/events/message) for details.
 
-## Reading Messages
+## Reading Messages (slack-read-resource)
 
 Usage in a pipeline:
 
@@ -114,7 +114,7 @@ When this configuration sees a message with the text `abc 123` and timestamp `11
 - `text_part2`: `123`
 
 
-## Posting Messages
+## Posting Messages (slack-post-resource)
 
 Usage in a pipeline:
 
@@ -194,3 +194,22 @@ Consider a job with the `get: slack-in` step from the example above followed by 
 This will reply to the message read by the `get` step (since `thread` is the timestamp of the original message), and the reply will read:
 
     Hi abc! I will do 123 right away!
+
+### `get`: Get the timestammp of the last message
+
+
+### Example
+
+Considere the use case where you what only **build** message to be send to the slack channel and all other messages (deploy, analysis, etc) to be send in a thread related to that build.
+
+`slack-out` is used to send message after the build job. In order to send message in the associated thread we use **get** on `slack-out` to collect its timestamp and use another ressource `slack-out-thread` to post the message without changing the version of `slack-out`.
+
+```
+name: deploy
+- get: slack-out
+  passed: [build]
+- put: slack-out-thread
+      params:
+        message:
+            thread_ts: "{{slack-out/timestamp}}"
+```
