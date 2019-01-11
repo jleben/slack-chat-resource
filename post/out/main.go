@@ -81,12 +81,25 @@ func interpolate_message(message * utils.OutMessage, source_dir string) {
 
     for i := 0; i < len(message.Attachments); i++ {
         attachment := &message.Attachments[i]
+
         attachment.Fallback = interpolate(attachment.Fallback, source_dir)
         attachment.Title = interpolate(attachment.Title, source_dir)
         attachment.TitleLink = interpolate(attachment.TitleLink, source_dir)
         attachment.Pretext = interpolate(attachment.Pretext, source_dir)
         attachment.Text = interpolate(attachment.Text, source_dir)
         attachment.Footer = interpolate(attachment.Footer, source_dir)
+
+        for j := 0; j < len(attachment.Fields); j++ {
+            field := &attachment.Fields[i]
+            field.Title = interpolate(field.Title, source_dir)
+            field.Value = interpolate(field.Value, source_dir)
+        }
+
+        for k := 0; k < len(attachment.Actions); k++ {
+            action := &attachment.Actions[i]
+            action.Text = interpolate(action.Text, source_dir)
+            action.URL = interpolate(action.URL, source_dir)
+        }
     }
 }
 
